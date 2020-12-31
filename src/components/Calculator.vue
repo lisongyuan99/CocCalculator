@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <!-- 我的信息-->
-    <v-btn @click="test">test</v-btn>
+    <!--    <v-btn @click="test">test</v-btn>-->
     <div class="info-input-panel">
       <div class="info-input">
         大本等级
@@ -11,13 +11,30 @@
       <div class="info-input">闪电等级
         <my-number-input v-model="myLightening"
                          :max="data.th[myTh].spell.lightening"/>
+        伤害：{{data.spell.lightening.damage[myLightening]}}
       </div>
-      <div class="info-input">地震等级
+      <div v-if="useEarthquake" class="info-input">地震等级
         <my-number-input v-model="myEarthquake"
                          :max="data.th[myTh].spell.earthquake"/>
+        伤害：{{data.spell.earthquake.damage[myEarthquake]}}
       </div>
+    </div>
+    <div v-if="clanSpellNum >= 1" class="info-input-panel">
+      <div class="info-input">
+        援军法术
+        <div class="info-input">
+          <v-radio-group v-model="radio" @change="clanSpellChange" row
+                         mandatory>
+            <v-radio label="不使用" value="0"/>
+            <v-radio v-if="clanSpellNum >= 1" label="闪电×1" value="1"/>
+            <v-radio v-if="clanSpellNum >= 1" label="地震×1" value="2"/>
+            <v-radio v-if="clanSpellNum >= 2" label="闪电×2" value="3"/>
+            <v-radio v-if="clanSpellNum >= 2" label="闪电×1 地震×1" value="4"/>
+            <v-radio v-if="clanSpellNum >= 2" label="地震×2" value="5"/>
+          </v-radio-group>
+        </div>
 
-
+      </div>
     </div>
     <div v-if="data.th[myTh].hero.royalChampion" class="info-input-panel">
       <div class="info-input">
@@ -28,7 +45,6 @@
                          :max="data.th[myTh].hero.royalChampion"/>
       </div>
     </div>
-    <div class="clan-spell-panel"></div>
     <div class="info-input-panel">
       <div class="info-input">
         敌人大本
@@ -63,9 +79,15 @@
               </div>
             </div>
           </td>
-          <td v-for="n in 5" :key="n">
-            <table-cell :nums="getSpellNum(n-1,
-            data.defence[key].hp[enemyDefence[key]], useRoyalChampion)"
+          <td v-for="n in tableHeader" :key="n">
+            <!--            {{-->
+            <!--              getSpellNum(n, myEarthquake, useEarthquake, myLightening,-->
+            <!--                  maxEarthquakeNum, maxLighteningNum, useRoyalChampion,-->
+            <!--                  myRoyalChampion, data.defence[key].hp[enemyDefence[key]])-->
+            <!--            }}-->
+            <table-cell :nums="getSpellNum(n, myEarthquake, useEarthquake, myLightening,
+                  maxEarthquakeNum, maxLighteningNum, useRoyalChampion,
+                  myRoyalChampion, data.defence[key].hp[enemyDefence[key]])"
                         :spell-sum="data.th[myTh].spell.spellNum"/>
           </td>
         </tr>
@@ -94,11 +116,14 @@ export default {
       myTh: 13,
       myLightening: 9,
       myEarthquake: 5,
+      clanSpellNum: 2,
       useRoyalChampion: false,
+      useEarthquake: true,
       myRoyalChampion: 25,
       enemyTh: 13,
-      fullEarthquakeNum: 0,
-      fullLighteningNum: 0,
+      radio: 0,
+      maxEarthquakeNum: 0,
+      maxLighteningNum: 0,
       enemyDefence: {
         eagleArtillery: 4,
         scattershot: 2,
@@ -108,26 +133,33 @@ export default {
         wizardTower: 13,
         xBow: 8,
       },
+      tableHeader: [0, 1, 2, 3, 4],
       data: {}
     }
   },
   methods: {
     test() {
-      for (let i = 0; i <= 4; i++) {
-        for (let j = 0; j <= 4; j++) {
-          this.fullEarthquakeNum = i;
-          this.getSpellNum(j, 10000)
-        }
-      }
+      console.log(this.radio)
     },
     myThChange() { // 自己大本等级变化
       this.myLightening = this.data.th[this.myTh].spell.lightening
       this.myEarthquake = this.data.th[this.myTh].spell.earthquake
       this.myRoyalChampion = this.data.th[this.myTh].hero.royalChampion
-      if (typeof(this.data.th[this.myTh].hero.royalChampion) == "undefined") {
+      if (typeof (this.data.th[this.myTh].hero.royalChampion) == "undefined") {
         this.useRoyalChampion = false
       }
-      this.enemyTh = this.myTh;
+      this.useEarthquake = !(typeof (this.data.th[this.myTh].spell.earthquake)
+          == "undefined")
+      if (this.useEarthquake) {
+        this.tableHeader = [0, 1, 2, 3, 4]
+      } else {
+        this.tableHeader = [0]
+      }
+      this.radio = 0
+      this.maxLighteningNum = 0
+      this.maxEarthquakeNum = 0
+      this.clanSpellNum = this.data.th[this.myTh].spell.clanSpellNum
+      this.enemyTh = this.myTh
       this.enemyThChange()
     },
     enemyThChange() {
@@ -136,53 +168,79 @@ export default {
         this.enemyDefence[i] = defenceLevel[i]
       }
     },
-    getSpellNum(earthquakeNum, defenceHp, useSkill) {
-      var e, l, fe, fl, r = 0
-      // 计算需要多少满级地震 多少普通地震
-      if (earthquakeNum <= this.fullEarthquakeNum) {
-        fe = earthquakeNum
-        e = 0
-      } else {
-        fe = this.fullEarthquakeNum
-        e = earthquakeNum - this.fullEarthquakeNum
+    getSpellNum(earthquakeNum, earthquakeLv, useEarthquake, lighteningLv,
+                maxEarthquakeNum, maxLighteningNum, useSkill,
+                heroLv, defenceHp) {
+      let e = 0
+      let fe = 0
+      let l = 0
+      let fl = 0
+      let r = 0
+      let restHp = defenceHp;
+      if (this.data.maxEarthquakeLv === earthquakeLv) {
+        maxEarthquakeNum = 0
       }
-
-      // 满级地震摧毁血量百分比
-      let feDamageRate = this.data.earthquakeDamageRate[0][fe] *
-          this.data.maxEarthquake
-      // 满级地震摧毁血量百分比
-      let eDamageRate = this.data.earthquakeDamageRate[fe + 1][fe + e] *
-          this.data.spell.earthquake.damage[this.myEarthquake]
-      // 剩余血量
-      let restHp = defenceHp * (1 - (feDamageRate + eDamageRate))
-      // 使用闰土技能
+      if (this.data.maxLighteningLv === lighteningLv) {
+        maxLighteningNum = 0
+      }
+      // 地震
+      if (useEarthquake) {
+        let earthquakeDamage = 0;
+        let restMaxEarthquakeNum = maxEarthquakeNum
+        for (let i = 0; i < earthquakeNum; i++) {
+          if (restMaxEarthquakeNum > 0) {
+            restMaxEarthquakeNum--
+            earthquakeDamage += this.data.maxEarthquake * (1 / (2 * i + 1))
+            fe++
+          } else {
+            earthquakeDamage += this.data.spell.earthquake.damage[earthquakeLv]
+                * (1 / (2 * i + 1))
+            e++
+          }
+        }
+        restHp = restHp * (1 - earthquakeDamage)
+      }
+      // 技能
       if (useSkill) {
-        let skillDamageLv =
-            this.data.hero.royalChampion.ability[this.myRoyalChampion]
-        restHp = restHp -
-            this.data.hero.royalChampion.abilityDamage[skillDamageLv]
+        let damageLv = this.data.hero.royalChampion.ability[heroLv]
+        restHp -= this.data.hero.royalChampion.abilityDamage[damageLv];
         r = 1
       }
-      // 还有血量
       if (restHp > 0) {
-        // 需要满级闪电个数
-        let flNum = Math.ceil(restHp / this.data.maxLightening);
-        if (this.fullLighteningNum >= flNum) {
-          fl = flNum
-          l = 0
+        // 闪电
+        let restHp2 = restHp
+        let maxLighteningDamage = this.data.maxLightening
+        let lighteningDamage = this.data.spell.lightening.damage[lighteningLv]
+        let temp = Math.ceil(restHp / maxLighteningDamage)
+        if (temp <= maxLighteningNum) {
+          fl = temp
         } else {
-          restHp = restHp - this.fullLighteningNum * this.data.maxLightening
-          fl = this.fullLighteningNum
-          l = Math.ceil(restHp / this.data.spell.lightening.damage[this.myLightening])
+          restHp -= this.data.maxLightening * maxLighteningNum
+          fl = maxLighteningNum
+          l = Math.ceil(restHp / lighteningDamage)
         }
-      } else {
-        l = 0
-        fl = 0
+        // 计算过量伤害换非满级闪电
+        let overflowDamage = fl * maxLighteningDamage + l * lighteningDamage - restHp2
+        let lighteningDamageDifference = maxLighteningDamage - lighteningDamage
+        let fl2 = fl
+        for (let i = 0; i < fl2; i++) {
+          if (overflowDamage > lighteningDamageDifference && fl > 0) {
+            fl--
+            l++
+            overflowDamage - lighteningDamageDifference
+          }
+        }
       }
       return [e, l, fe, fl, r];
+    },
+    clanSpellChange() {
+      console.log(this.radio);
+      let tempL = [0, 1, 0, 2, 1, 0]
+      let tempE = [0, 0, 1, 0, 1, 2]
+      this.maxEarthquakeNum = tempE[this.radio]
+      this.maxLighteningNum = tempL[this.radio]
     }
   },
-  watch: {}
 }
 </script>
 
@@ -190,7 +248,6 @@ export default {
 .info-input {
   display: flex;
   flex-direction: row;
-  align-items: center;
   align-items: center;
   margin-right: 30px;
 }

@@ -56,6 +56,7 @@ export default {
       spell: {
         lightening: 4,
         spellNum: 2,
+        clanSpellNum: 0,
       },
       defence: {
         airDefence: 3,
@@ -67,6 +68,7 @@ export default {
       spell: {
         lightening: 4,
         spellNum: 4,
+        clanSpellNum: 0,
       },
       defence: {
         airDefence: 4,
@@ -79,6 +81,7 @@ export default {
       spell: {
         lightening: 4,
         spellNum: 6,
+        clanSpellNum: 0,
       },
       defence: {
         airDefence: 5,
@@ -190,12 +193,6 @@ export default {
   maxTh: 13,
   maxEarthquake: 0.29,
   maxLightening: 560,
-  earthquakeDamageRate: [
-    [0, 1, 1.3333333333333333, 1.5333333333333333, 1.676190476190476],
-    [0, 1, 1.3333333333333333, 1.5333333333333333, 1.676190476190476],
-    [0, 0, 0.3333333333333333, 0.5333333333333333, 0.6761904761904762],
-    [0, 0, 0, 0.2, 0.34285714285714286],
-    [0, 0, 0, 0, 0.14285714285714285],
-    [0, 0, 0, 0, 0]
-  ]
+  maxEarthquakeLv:5,
+  maxLighteningLv:9,
 }
